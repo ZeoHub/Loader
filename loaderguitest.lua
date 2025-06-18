@@ -1,7 +1,7 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 -- Queue this GUI script to run on every teleport/serverhop
-local guiSource = "https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/OldServerFinderlua" -- CHANGE to your raw GitHub or Pastebin link
+local guiSource = "https://raw.githubusercontent.com/ZeoHub/Loader/refs/heads/main/test.lua" -- CHANGE to your raw GitHub or Pastebin link
 local queueTeleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport) or function() end
 queueTeleport(('loadstring(game:HttpGet("%s"))()'):format(guiSource))
 
