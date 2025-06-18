@@ -3,9 +3,13 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 
 local placeId = game.PlaceId
-local currentJobId = game.JobId
-local MAX_PLAYERS_IN_TARGET = 1 -- Only want to stay in solo servers
+local MAX_PLAYERS_IN_TARGET = 1
+local ERROR_WAIT = 2
 
+local q = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+local scriptToQueue = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Loader/refs/heads/main/test.lua"))()]]
+
+-- Find a low-pop server, skipping current server
 local function findLowPopServer()
     local bestServer = nil
     local bestCount = math.huge
@@ -17,11 +21,11 @@ local function findLowPopServer()
         end)
         if success and result and result.data then
             for _, server in ipairs(result.data) do
-                if server.id ~= currentJobId and server.playing and server.maxPlayers and server.playing <= MAX_PLAYERS_IN_TARGET then
+                if server.id ~= game.JobId and server.playing and server.playing <= MAX_PLAYERS_IN_TARGET then
                     if server.playing < bestCount then
                         bestServer = server
                         bestCount = server.playing
-                        return bestServer
+                        -- Don't return immediately, try to get the lowest pop
                     end
                 end
             end
@@ -31,39 +35,72 @@ local function findLowPopServer()
                 break
             end
         else
-            warn("Failed to fetch server list. Hit rate limit or error. Waiting before retrying...")
-            task.wait(2)
+            warn("Failed to fetch server list. Waiting before retrying...")
+            task.wait(ERROR_WAIT)
         end
     end
     return bestServer
 end
 
-local q = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
-local scriptToQueue = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Loader/refs/heads/main/test.lua"))()]]
+-- Teleport and handle GameFull retry
+local function safeTeleportLoop()
+    local attempts = 0
+    local maxAttempts = 10
+    while attempts < maxAttempts do
+        local targetServer = findLowPopServer()
+        if not targetServer then
+            warn("No suitable public server found. Please try again later.")
+            return
+        end
 
-local function safeTeleport(placeId, jobId)
-    if q then
-        q(scriptToQueue)
+        warn("Attempting teleport to JobID:", targetServer.id)
+        if q then
+            q(scriptToQueue)
+        end
+
+        local teleportFailed = false
+        local connection
+        connection = TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+            warn("Teleport failed: " .. tostring(errorMessage))
+            if teleportResult == Enum.TeleportResult.GameFull then
+                warn("Target server is full, retrying another server...")
+                teleportFailed = true
+            else
+                warn("Teleport failed for another reason: " .. tostring(teleportResult))
+            end
+            if connection then connection:Disconnect() end
+        end)
+
+        TeleportService:TeleportToPlaceInstance(placeId, targetServer.id, Players.LocalPlayer)
+        -- Wait for teleport or failure
+        local timeout = 10
+        while timeout > 0 and not teleportFailed do
+            task.wait(1)
+            timeout = timeout - 1
+        end
+
+        -- If teleport failed due to full server, try next
+        if teleportFailed then
+            attempts = attempts + 1
+            warn("Retrying... ("..attempts.."/"..maxAttempts..")")
+            task.wait(1)
+        else
+            break -- Teleport initiated or succeeded, exit loop
+        end
     end
-    TeleportService:TeleportToPlaceInstance(placeId, jobId, Players.LocalPlayer)
+    if attempts >= maxAttempts then
+        warn("Failed to find a non-full server after multiple attempts.")
+    end
 end
 
--- Only load once per server session
+-- Main detection loop, every 3 seconds
 local loaderLoaded = false
-
 while true do
     local currentPlayers = #Players:GetPlayers()
-    local maxPlayers = Players.MaxPlayers
-
     if currentPlayers > MAX_PLAYERS_IN_TARGET then
         warn("Detected "..currentPlayers.." players in server! (target is "..MAX_PLAYERS_IN_TARGET..") Serverhopping...")
-        local targetServer = findLowPopServer()
-        if targetServer then
-            safeTeleport(placeId, targetServer.id)
-        else
-            warn("No suitable public server found. Please try again later.")
-        end
-        break -- stop the loop after teleporting!
+        safeTeleportLoop()
+        break
     else
         if not loaderLoaded then
             warn("You are in a server with "..currentPlayers.." player(s). Running loader.")
@@ -73,7 +110,6 @@ while true do
             print("Loader script executed!", success, result)
             loaderLoaded = true
         end
-        -- Only check every 3 seconds for new players
-        task.wait(3)
+        task.wait(5) -- Wait 5 seconds before next check to avoid spamming
     end
 end
