@@ -62,7 +62,7 @@ buttonCorner.CornerRadius = UDim.new(0, 12)
 
 button.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/OldServerFinderv1", true))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Loader/refs/heads/main/test.lua", true))()
     end)
 end)
 
