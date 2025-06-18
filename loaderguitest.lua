@@ -216,5 +216,5 @@ end
 -- Always load OldServerFinder GUI (after logic)
 task.wait(1)
 pcall(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/OldServerFinder"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Loader/refs/heads/main/test.lua"))()
 end)
