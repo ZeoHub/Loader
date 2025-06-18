@@ -1,11 +1,90 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
 
-local function prompt(title, text)
-    -- ... [prompt function as you wrote it] ...
-    -- (omitted for brevity, unchanged)
-end
+-- Queue this GUI script to run on every teleport/serverhop
+local guiSource = "https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/OldServerFinderlua" -- CHANGE to your raw GitHub or Pastebin link
+local queueTeleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport) or function() end
+queueTeleport(('loadstring(game:HttpGet("%s"))()'):format(guiSource))
 
-local o = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/OldServerFinder"))()
+-- Remove duplicate GUI
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local oldGui = playerGui:FindFirstChild("PersistentOldServerFinderGui")
+if oldGui then oldGui:Destroy() end
+
+-- Create visible GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PersistentOldServerFinderGui"
+screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Parent = screenGui
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Position = UDim2.new(0.5, 0, 0.45, 0)
+mainFrame.Size = UDim2.new(0, 300, 0, 160)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+mainFrame.BorderSizePixel = 0
+
+local uicorner = Instance.new("UICorner", mainFrame)
+uicorner.CornerRadius = UDim.new(0, 16)
+
+local titleLabel = Instance.new("TextLabel", mainFrame)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.Size = UDim2.new(1, 0, 0, 36)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Old Server Finder"
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextColor3 = Color3.fromRGB(235, 235, 235)
+titleLabel.TextSize = 26
+
+local infoLabel = Instance.new("TextLabel", mainFrame)
+infoLabel.Position = UDim2.new(0, 0, 0, 40)
+infoLabel.Size = UDim2.new(1, 0, 0, 50)
+infoLabel.BackgroundTransparency = 1
+infoLabel.Text = "This GUI will always show after rejoin/serverhop!"
+infoLabel.Font = Enum.Font.Gotham
+infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+infoLabel.TextSize = 16
+infoLabel.TextWrapped = true
+
+local button = Instance.new("TextButton", mainFrame)
+button.Position = UDim2.new(0.5, -90, 0.7, 0)
+button.Size = UDim2.new(0, 180, 0, 38)
+button.Text = "Run Menace Hub"
+button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+button.TextColor3 = Color3.fromRGB(235, 235, 235)
+button.Font = Enum.Font.GothamSemibold
+button.TextSize = 20
+button.AutoButtonColor = true
+
+local buttonCorner = Instance.new("UICorner", button)
+buttonCorner.CornerRadius = UDim.new(0, 12)
+
+button.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/OldServerFinderv1", true))()
+    end)
+end)
+
+mainFrame.Active = true
+mainFrame.Draggable = true
+
+local closeBtn = Instance.new("TextButton", mainFrame)
+closeBtn.Text = "X"
+closeBtn.Size = UDim2.new(0, 32, 0, 32)
+closeBtn.Position = UDim2.new(1, -36, 0, 4)
+closeBtn.BackgroundTransparency = 1
+closeBtn.TextColor3 = Color3.fromRGB(255, 82, 82)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 22
+closeBtn.ZIndex = 3
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+-- === Your Script's Core Logic Below (unchanged) ===
+
+local o = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/Gui.lua"))()
 function nt(n, c)
     if o and o.MakeNotification then
         o:MakeNotification({
@@ -32,8 +111,7 @@ if game.PlaceId ~= gagid then
     return
 end
 
-local queueTeleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport) or function() end
-local oldVersionMax = 1279 -- servers with this place version or lower are considered old
+local oldVersionMax = 1279
 local currentVersion = game.PlaceVersion
 
 local shf = ([[
@@ -135,6 +213,8 @@ else
     end
 end
 
--- >>>> Add this at the end <<<<
+-- Always load OldServerFinder GUI (after logic)
 task.wait(1)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/OldServerFinder"))()
+pcall(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ZeoHub/Load/refs/heads/main/OldServerFinder"))()
+end)
