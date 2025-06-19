@@ -1,50 +1,47 @@
--- Rejoin to a public server (not the current one)
+local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
-local PlaceId = game.PlaceId
-local LocalPlayer = Players.LocalPlayer
 
--- Try to find a different public server
-local function getRandomServer()
-    local HttpService = game:GetService("HttpService")
-    local servers = {}
-    local req = syn and syn.request or http and http.request or http_request or request
-    if not req then
-        warn("Your executor does not support HTTP requests.")
-        return nil
-    end
+local placeId = game.PlaceId
+local currentJobId = game.JobId
+
+local function findLowPopServer()
     local cursor = ""
-    while true do
-        local url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=2&limit=100%s", PlaceId, cursor ~= "" and "&cursor="..cursor or "")
-        local response = req({Url = url, Method = "GET"})
-        if response and response.Body then
-            local data = HttpService:JSONDecode(response.Body)
-            for _, server in pairs(data.data) do
-                if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                    table.insert(servers, server.id)
+    local lowest = nil
+    local lowestPlayerCount = math.huge
+    for i = 1, 10 do -- Try up to 10 pages
+        local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet(url))
+        end)
+        if success and result and result.data then
+            for _, server in ipairs(result.data) do
+                if server.id ~= currentJobId and server.playing and server.maxPlayers and server.playing < server.maxPlayers then
+                    if server.playing < lowestPlayerCount then
+                        lowest = server
+                        lowestPlayerCount = server.playing
+                    end
                 end
             end
-            if data.nextPageCursor then
-                cursor = data.nextPageCursor
+            if result.nextPageCursor then
+                cursor = result.nextPageCursor
             else
                 break
             end
         else
-            break
+            warn("Failed to fetch server list. Hit rate limit or error. Waiting before retrying...")
+            task.wait(3) -- Wait longer after an error
         end
+        task.wait(1) -- Wait after every page to avoid rate limit
     end
-    if #servers > 0 then
-        return servers[math.random(1, #servers)]
-    else
-        return nil
-    end
+    return lowest
 end
 
-local serverId = getRandomServer()
-if serverId then
-    TeleportService:TeleportToPlaceInstance(PlaceId, serverId, LocalPlayer)
-    print("Rejoining a different public server!")
+local targetServer = findLowPopServer()
+if targetServer then
+    print("Teleporting to server:", targetServer.id, "Players:", targetServer.playing)
+    TeleportService:TeleportToPlaceInstance(placeId, targetServer.id, Players.LocalPlayer)
 else
-    print("No available public servers found. Rejoining same server instead.")
-    TeleportService:Teleport(PlaceId)
+    warn("No less-populated server found. Rejoining current server.")
+    TeleportService:Teleport(placeId, Players.LocalPlayer)
 end
