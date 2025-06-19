@@ -6,7 +6,7 @@ local placeId = game.PlaceId
 -- List your private server IDs here, in order of preference
 local privateServerIds = {
     "https://www.roblox.com/share?code=b35901cb37e539488443859bc139311b&type=Server", -- replace with your first private server ID
-    "https://www.roblox.com/share?code=f921960f9ea9ef49bdd76d922625dcbe&type=Server", -- replace with your second private server ID
+    "", -- replace with your second private server ID
     -- Add more IDs as needed
 }
 
