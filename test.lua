@@ -8,5 +8,5 @@ if q then
 end
 
 -- 3. Teleport to the desired place
-local PLACE_ID = 4924922222 -- Change this to your desired PlaceId
+local PLACE_ID = 126884695634066 -- Change this to your desired PlaceId
 game:GetService("TeleportService"):Teleport(PLACE_ID)
